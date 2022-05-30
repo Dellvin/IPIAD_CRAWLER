@@ -1,0 +1,15 @@
+cluster.name: meitu
+node.name: node-data-1
+node.master: false
+node.data: true
+http.port: 9200
+network.host: 0.0.0.0
+#network.publish_host: data-ip
+discovery.zen.ping.unicast.hosts: ["master"]
+
+http.cors.enabled: true
+http.cors.allow-origin: "*"
+discovery.zen.minimum_master_nodes: 1
+
+xpack.security.enabled: false
+

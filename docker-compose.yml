@@ -1,16 +1,55 @@
 version: '3.7'
-
 services:
-  elasticsearch:
-    container_name: es-container
+  master:
     image: docker.elastic.co/elasticsearch/elasticsearch:8.1.0
+    container_name: master
     environment:
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
       - xpack.security.enabled=false
       - "discovery.type=single-node"
-    networks:
-      - es-net
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+      nofile:
+        soft: 65536
+        hard: 65536
+    mem_limit: 1g
+    cap_add:
+      - IPC_LOCK
+    volumes:
+      - ./es/master/data:/usr/share/elasticsearch/data
+      - ./es/master/elasticsearch.yml:/usr/share/elasticsearch/config/elasticsearch.yml
     ports:
       - 9200:9200
+    networks:
+      - esnet
+
+  slave:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.1.0
+    container_name: slave
+    environment:
+      - bootstrap.memory_lock=true
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+      nofile:
+        soft: 65536
+        hard: 65536
+    mem_limit: 1g
+    cap_add:
+      - IPC_LOCK
+    volumes:
+      - ./es/slave/data:/usr/share/elasticsearch/data
+      - ./es/slave/elasticsearch.yml:/usr/share/elasticsearch/config/elasticsearch.yml
+    ports:
+      - 9202:9200
+    links:
+      - master
+    networks:
+      - esnet
 
   rabbitmq:
     image: rabbitmq:3-management-alpine
@@ -24,6 +63,18 @@ services:
     networks:
       - rabbitmq_go_net
 
+  kibana:
+    container_name: kb-container
+    image: docker.elastic.co/kibana/kibana:7.11.0
+    environment:
+      - ELASTICSEARCH_HOSTS=http://es-container:9200
+    networks:
+      - esnet
+    depends_on:
+      - master
+    ports:
+      - 5601:5601
+
   crawler:
     ports:
       - 8080:8080
@@ -31,23 +82,77 @@ services:
       context: ./
       dockerfile: ./Dockerfile
     networks:
-      - es-net
+      - esnet
       - rabbitmq_go_net
-
-  kibana:
-    container_name: kb-container
-    image: docker.elastic.co/kibana/kibana:7.11.0
-    environment:
-      - ELASTICSEARCH_HOSTS=http://es-container:9200
-    networks:
-      - es-net
     depends_on:
-      - elasticsearch
-    ports:
-      - 5601:5601
+      - kibana
+
+volumes:
+  esdata1:
+    driver: local
+  esdata2:
+    driver: local
 
 networks:
-  es-net:
+  esnet:
     driver: bridge
   rabbitmq_go_net:
     driver: bridge
+
+
+
+#####################################################
+
+#version: '3.7'
+#
+#services:
+#  elasticsearch:
+#    container_name: es-container
+#    image: docker.elastic.co/elasticsearch/elasticsearch:8.1.0
+#    environment:
+#      - xpack.security.enabled=false
+#      - "discovery.type=single-node"
+#    networks:
+#      - es-net
+#    ports:
+#      - 9200:9200
+#
+#  rabbitmq:
+#    image: rabbitmq:3-management-alpine
+#    container_name: 'rabbitmq'
+#    ports:
+#      - 5672:5672
+#      - 15672:15672
+#    volumes:
+#      - ~/.docker-conf/rabbitmq/data/:/var/lib/rabbitmq/
+#      - ~/.docker-conf/rabbitmq/log/:/var/log/rabbitmq
+#    networks:
+#      - rabbitmq_go_net
+#
+#  crawler:
+#    ports:
+#      - 8080:8080
+#    build:
+#      context: ./
+#      dockerfile: ./Dockerfile
+#    networks:
+#      - es-net
+#      - rabbitmq_go_net
+#
+#  kibana:
+#    container_name: kb-container
+#    image: docker.elastic.co/kibana/kibana:7.11.0
+#    environment:
+#      - ELASTICSEARCH_HOSTS=http://es-container:9200
+#    networks:
+#      - es-net
+#    depends_on:
+#      - elasticsearch
+#    ports:
+#      - 5601:5601
+#
+#networks:
+#  es-net:
+#    driver: bridge
+#  rabbitmq_go_net:
+#    driver: bridge
