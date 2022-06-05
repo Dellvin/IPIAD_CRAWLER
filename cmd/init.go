@@ -8,7 +8,7 @@ import (
 )
 
 func CreateConnection() (*elastic.Client, error) {
-	client, err := elastic.NewClient(elastic.SetURL("http://master:9200"),
+	client, err := elastic.NewClient(elastic.SetURL("http://localhost:9200"),
 		elastic.SetSniff(false),
 		elastic.SetHealthcheck(false))
 	if err != nil {

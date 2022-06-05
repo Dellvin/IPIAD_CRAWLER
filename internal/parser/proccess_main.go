@@ -46,6 +46,8 @@ func Process(es *elastic.Client) ([]model.News, error) {
 		}
 	})
 
+	send("stop")
+
 	wg.Wait()
 
 	return news, err

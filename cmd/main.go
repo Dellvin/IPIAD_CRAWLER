@@ -4,6 +4,7 @@ import (
 	"IPIAD_DZ/internal/parser"
 	"IPIAD_DZ/internal/repository"
 	"fmt"
+	"github.com/rai-project/go-fasttext"
 	"log"
 )
 
@@ -16,19 +17,36 @@ func main() {
 	if err != nil {
 		fmt.Println(err)
 	}
-	fmt.Println("\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"        GET ALL ITEMS       \"\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\n\n\n")
-	repository.GetAll(es)
 
-	fmt.Println("\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"        GET ITEMS BY(link)      \"\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\n\n\n")
-	news, err := repository.GetBy(es, "Link", "https://upravavernadskogo.ru/sotrudniki-detskoj-biblioteki-215-posetili-biblioteku-pri-rospatente")
-	if err == nil {
-		for _, n := range news {
-			fmt.Printf("%v\n", n)
+	news, err := repository.GetAll(es)
+	if err != nil {
+		fmt.Printf(err.Error())
+		return
+	}
+
+	m := fasttext.Open("cc.en.300.bin")
+	if m == nil {
+		log.Fatalf("file not found")
+	}
+
+	a, b, err := calcClusters(m)
+	if err != nil {
+		log.Fatalf(err.Error())
+	}
+
+	var aCounter, bCounter int
+	for _, n := range news {
+		cluster, e := chooseCluster(a, b, n.Body, m)
+		if e != nil {
+			continue
+		}
+		if cluster {
+			aCounter++
+		} else {
+			bCounter++
 		}
 	}
 
-	fmt.Println("\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"        GET AGGREGATED(PublishedAt) ITEMS       \"\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\n\n\n")
-
-	repository.GetAggregate(es, "PublishedAt")
-
+	fmt.Printf("Add %d news to cluster A\n", aCounter)
+	fmt.Printf("Add %d news to cluster B\n", bCounter)
 }

@@ -1,19 +1,18 @@
-FROM golang:1.16-buster AS build
+FROM golang:1.16-alpine
 
 WORKDIR /app
 
-COPY ./go.mod go.sum ./
-
-COPY . .
-
-WORKDIR /app/cmd
-
-RUN go mod vendor
+# Download necessary Go modules
+COPY go.mod ./
+COPY go.sum ./
 RUN go mod download
+
+COPY ./ ./
+
+WORKDIR cmd
 RUN go build -o main .
 
-WORKDIR /app
-
+WORKDIR ../
 EXPOSE 80
 
-ENTRYPOINT [ "./cmd/main" ]
+ENTRYPOINT [ "./main" ]

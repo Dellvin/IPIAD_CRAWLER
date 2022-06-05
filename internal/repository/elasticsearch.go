@@ -29,7 +29,7 @@ func SaveNews(es *elastic.Client, news []byte, hash string) error {
 	return nil
 }
 
-func GetAll(es *elastic.Client) {
+func GetAll(es *elastic.Client) ([]model.News, error) {
 	searchSource := elastic.NewSearchSource()
 	searchSource.Query(elastic.NewMatchAllQuery())
 
@@ -38,7 +38,7 @@ func GetAll(es *elastic.Client) {
 	searchResult, err := searchService.Do(context.Background())
 	if err != nil {
 		fmt.Println("[ProductsES][GetPIds]Error=", err)
-		return
+		return nil, err
 	}
 	var news []model.News
 	for _, hit := range searchResult.Hits.Hits {
@@ -51,10 +51,7 @@ func GetAll(es *elastic.Client) {
 		news = append(news, n)
 	}
 
-	for _, s := range news {
-		fmt.Printf("%v \n", s)
-	}
-
+	return news, err
 }
 
 func GetBy(es *elastic.Client, field string, value interface{}) ([]model.News, error) {

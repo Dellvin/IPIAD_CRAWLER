@@ -21,14 +21,17 @@ func getAsyncNews(es *elastic.Client) ([]model.News, error) {
 		news = make([]model.News, 0)
 	)
 
-	wg := sync.WaitGroup{}
+	wg := &sync.WaitGroup{}
 
 	msgs := recvSetup()
 
 	for m := range msgs {
+		if string(m.Body) == "stop" {
+			break
+		}
 		wg.Add(1)
 		fmt.Println("++++++++++++++recv: ", string(m.Body))
-		go getPageInfo(string(m.Body), &wg, es)
+		go getPageInfo(string(m.Body), wg, es)
 	}
 
 	wg.Wait()
@@ -37,7 +40,10 @@ func getAsyncNews(es *elastic.Client) ([]model.News, error) {
 }
 
 func getPageInfo(link string, wg *sync.WaitGroup, es *elastic.Client) {
-	defer wg.Done()
+	defer func() {
+		wg.Done()
+		fmt.Println("DONE")
+	}()
 
 	var news model.News
 
@@ -100,5 +106,6 @@ func recvSetup() <-chan amqp.Delivery {
 		nil,    // args
 	)
 	failOnError(err, "Failed to register a consumer")
+
 	return msgs
 }
